@@ -1,3 +1,10 @@
+"""
+Useful utility functions to help data processing.
+"""
+
+# Author: Yang Dai <daiy@mit.edu>
+
+
 import numpy as np
 
 
