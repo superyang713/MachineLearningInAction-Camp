@@ -1,0 +1,12 @@
+.ropeproject
+.idea
+.pytest_cache
+__pycache__
+.DS_Store
+.env
+QR.png
+wechat_api.pyc
+geckodriver.log
+build/
+dist/
+.ipynb_checkpoints/
