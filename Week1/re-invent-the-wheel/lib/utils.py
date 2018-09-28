@@ -88,6 +88,27 @@ def load_data(fname, delimiter='\t'):
     return X, y
 
 
+def load_image(filepath):
+    """
+    Load data from a image-like file.
+
+    Parameters
+    ----------
+    fname: str or path-like object (absolute or relative to the current \
+        working dir)
+
+    Returns
+    -------
+    result: numpy array.
+    X : feature vector with the shape (n_features,)
+    """
+    with open(filepath, 'r') as fin:
+        raw_data = [row.strip() for row in fin.readlines()]
+        raw_data = np.array(list(''.join(raw_data)), dtype='i4')
+
+    return raw_data
+
+
 def split_train_test(X, y, ratio=0.2):
     """
     Create new training and test data sets based on the provided ratio
@@ -145,5 +166,41 @@ def get_error_rate(y_label, y_predict):
 
     n_samples = len(y_label)
     n_errors = n_samples - np.sum(y_label == y_predict)
-    error_rate = n_errors / len(y_label)
+    error_rate = n_errors / n_samples
     return error_rate
+
+
+def get_image_data(folder):
+    """
+    Get all digit images into an numpy array.
+
+    Each digit is one txt file, and all training digit txt files are under \
+        the same folder.
+
+    Parameter:
+    ----------
+    folder : str
+        The folder path where all training txt files are stored.
+
+    Returns:
+    --------
+    feature : array
+        Feature array with the shape(n_samples, n_features), here n_samples \
+            are the numbers of digits, and a feature is eqivalent to a pixel.
+    label : array
+        Class array with the shape(n_samples,).
+    """
+
+    files = os.listdir(folder)
+    n_samples = len(files)
+    n_features = len(load_image(os.path.join(folder, files[0])))
+
+    feature = np.empty((n_samples, n_features), dtype='i4')
+    label = np.empty(n_samples, dtype='i4')
+
+    for i, fname in enumerate(files):
+        filepath = os.path.join(folder, fname)
+        feature[i, :] = load_image(filepath)
+        label[i] = fname.split('_')[0]
+
+    return feature, label
