@@ -6,6 +6,7 @@ Useful utility functions to help data processing.
 
 
 import numpy as np
+import os
 
 
 def check_X_y(X, y):
@@ -48,7 +49,7 @@ def create_dataset():
 
 def load_data(fname, delimiter='\t'):
     """
-    Load data from a text file.
+    Load data from a text file, which must be located in data/.
 
     No headers.
     Each row in the text file must have the same number of values.
@@ -69,7 +70,9 @@ def load_data(fname, delimiter='\t'):
         Features and labels.
     """
 
-    with open(fname, 'r') as fin:
+    folder = os.path.abspath(os.getcwd())
+    filepath = os.path.join(folder, 'data', fname)
+    with open(filepath, 'r') as fin:
         raw_data = fin.readlines()
         n_rows = len(raw_data)
         n_cols = len(raw_data[0].split(delimiter))
