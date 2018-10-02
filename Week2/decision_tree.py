@@ -42,12 +42,11 @@ class Leaf:
         """
         Counts the number of the samples that have the same label.
         Return:
-            counts: dict
+            int: the predicted label.
         """
 
         unique, counts = np.unique(y, return_counts=True)
-
-        return dict(zip(unique, counts))
+        return unique[np.argmax(counts)]
 
 
 class Node:
@@ -88,10 +87,10 @@ class DecisionTreeClassifier:
 
         true_node = self.fit(X_true_branch, y_true_branch)
         false_node = self.fit(X_false_branch, y_false_branch)
+        self.tree = Node(question, true_node, false_node)
+        return self.tree
 
-        return Node(question, true_node, false_node)
-
-    def predict(self, tree, x):
+    def predict(self, X):
         """
         Use the model to predict the result with the new data X.
         """
@@ -101,14 +100,49 @@ class DecisionTreeClassifier:
         # 2. Should be able to pass matrix instead of a vector, and return an
         # np array vector for the label.
         # 3. Should convert the dict to int.
+        n_samples = len(X)
+        y_predict = np.empty(n_samples)
+
+        for i, x in enumerate(X):
+            y_predict[i] = self._predict(self.tree, x)
+
+        return y_predict
+
+    def _predict(self, tree, x):
+        """
+        Use the model to predict the result with the new data X.
+        """
 
         if isinstance(tree, Leaf):
-            return tree.prediction.values()
+            return tree.prediction
 
         if tree.question.ask(x):
-            return self.predict(tree.true_node, x)
+            return self._predict(tree.true_node, x)
         else:
-            return self.predict(tree.false_node, x)
+            return self._predict(tree.false_node, x)
+
+    def print_tree(self, spacing=''):
+        self._print_tree(self.tree, spacing=spacing)
+
+    def _print_tree(self, tree, spacing=''):
+        """
+        It is a helper method to visualize the tree if the model is small.
+        Used to test model.
+        """
+        if isinstance(tree, Leaf):
+            print(spacing + "Predict", tree.prediction)
+            return
+
+        # Print the question at this node
+        print(spacing + str(tree.question))
+
+        # Call this function recursively on the true branch
+        print(spacing + '--> True:')
+        self._print_tree(tree.true_node, spacing + "  ")
+
+        # Call this function recursively on the false branch
+        print(spacing + '--> False:')
+        self._print_tree(tree.false_node, spacing + "  ")
 
     @staticmethod
     def _split(X, y, question):
