@@ -15,6 +15,8 @@ good enough for my learning purpose.
 
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 
 
 class Question:
@@ -252,3 +254,41 @@ class DecisionTreeClassifier:
                     best_question = question
 
         return best_gain, best_question
+
+    def plot_decision_boundary(self, X, y):
+        """
+        Make a decision boundary plot for the trained Decision Tree \
+            Classifier and examine how trained or test sets fit into the plot.
+
+        Parameter:
+        ---------
+        X : numpy array
+            The shape must be (n_samples, 2), which means there can only be \
+                two features.
+        y: numpy array
+            Labels. 1-D vector.
+        """
+
+        # Plot decision boundary.
+        colors = ['red', 'green', 'blue']
+        X1_coor, X2_coor = np.meshgrid(
+            np.arange(start=X[:, 0].min()-1, stop=X[:, 0].max()+1, step=0.01),
+            np.arange(start=X[:, 1].min()-1, stop=X[:, 1].max()+1, step=0.01)
+        )
+        X_grid = np.array([X1_coor.ravel(), X2_coor.ravel()]).T
+        Y_grid = self.predict(X_grid).reshape(X1_coor.shape)
+        cmap = ListedColormap(colors)
+
+        plt.figure(figsize=(8, 8))
+        plt.contourf(X1_coor, X2_coor, Y_grid, alpha=0.75, cmap=cmap)
+        plt.xlim(X1_coor.min(), X1_coor.max())
+        plt.ylim(X2_coor.min(), X2_coor.max())
+
+        # Plot datapoints in the decision boundary graph.
+        unique = list(set(y))
+        for i, label in enumerate(unique):
+            X1 = X[y[:] == label, 0]
+            X2 = X[y[:] == label, 1]
+            plt.scatter(X1, X2, c=colors[i], label=label)
+            plt.legend()
+        plt.legend()
