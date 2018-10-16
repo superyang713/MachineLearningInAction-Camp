@@ -17,10 +17,24 @@ is:
 
     Question:
     What is the probability that a part produced by machine 2 is defective?
+    P(Defect | Mach2) = ?
 
+
+    P(Defect | Mach2) = P(Mach2 | Defect) * P(Defect) / P(Mach2)
+                      = 0.5 * 0.01 / 0.4
+                      = 0.0125
+
+Intuition:
+    * 1000 wrenches
+    * 400 came from Mach2
+    * 1% have a defect = 10
+    * of them 50% came from Mach2 = 5
+    * Therefore, % defective parts from Mach2 = 5 / 400 = 0.0125
+
+    This is exactly what Bayes Therorem is:
+    P(Defect | Mach2) = P(Mach2 | Defect) * P(Defect) * 1000 / P(Mach2) * 1000
+    1000 will be cancelled.
 
 """
 
 # Author: Yang Dai <daiy@mit.edu>
-
-
