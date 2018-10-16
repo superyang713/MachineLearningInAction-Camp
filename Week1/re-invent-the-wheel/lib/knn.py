@@ -6,8 +6,9 @@ The structure is inspired by scikit-learn python library.
 # Author: Yang Dai <daiy@mit.edu>
 
 
-import numpy as np
 from collections import Counter
+import numpy as np
+import matplotlib.pyplot as plt
 
 from lib import utils
 
@@ -61,18 +62,18 @@ class KNeighborsClassifier:
         """
 
         X = utils.check_X(X)
-        n_samples = self.X.shape[0]
+        n_samples = X.shape[0]
+
+        # Use 2d array instead of for loop can dramatically improve
+        # performance.
+        dists = np.sqrt(
+            -2 * np.dot(X, self.X.T) + np.sum(self.X**2, axis=1) + \
+            np.sum(X**2, axis=1).reshape(n_samples, -1)
+        )
 
         y_predict = []
-        for instance in X:
-            distance = np.linalg.norm(
-                self.X - np.tile(instance, (n_samples, 1)), axis=1,
-            )
-
-            # Get the indices of k highest numbers.
-            k_nearest_indx = distance.argsort()[:self.n_neighbors]
-
-            # Get the label with the majority votes.
+        for dist in dists:
+            k_nearest_indx = dist.argsort()[:self.n_neighbors]
             nearest_vectors = self.y[k_nearest_indx]
             c = Counter(nearest_vectors)
             y_predict.append(c.most_common(1)[0][0])
