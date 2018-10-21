@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.datasets import make_blobs, make_circles, make_moons
+from sklearn.datasets import make_blobs
 from sklearn.preprocessing import StandardScaler
 
 
@@ -43,30 +43,6 @@ def main():
     fig, ax = plt.subplots()
     grid, ax = plot_decision_boundary(output, ax)
     plt.show()
-
-
-class SVMClassifier:
-    def __init__(self, errors, alphas, C=1.0, kernel='linear', b=1, sigma=1):
-        """
-        Hyperparameters:
-            C: float, optional (default=1.)
-
-            kernel: string, optional (default='linear')
-                Specified the kernel type to be used in the algorithm. It can
-                be 'linear' or 'gaussian'.
-        """
-        # Hyperparameter
-        self.C = C
-        self.kernel = kernel
-
-        # Lagrange multiplier vector
-        self.alphas = alphas
-        # Scalar bias term
-        self.b = b
-        # Error cache
-        self.errors = errors
-        # Record objective function value
-        self._obj = []
 
 
 class SMOModel:
@@ -136,7 +112,7 @@ def decision_function(alphas, target, kernel, X_train, x_test, b):
     Applies the SVM decision function to the input feature vectors in `x_test`
     """
 
-    result = (alphas * target) @ kernel(X_train, x_test) - b
+    result = np.dot((alphas * target), kernel(X_train, x_test)) - b
     return result
 
 

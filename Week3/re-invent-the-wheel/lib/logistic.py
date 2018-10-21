@@ -48,10 +48,8 @@ class LogisticRegression:
 
         Parameters:
         ----------
-        w : weights vector, a numpy array of size (1, n_features)
-        b : bias, a scalar
-        X : data, a numpy array of size (n_features, n_samples)
-        y : label vecotr, a numpy array of size (1, n_samples)
+        X : data, a numpy array of size (n_samples, n_features)
+        y : label vecotr, a numpy array of size (n_samples)
 
         Return:
         ------
