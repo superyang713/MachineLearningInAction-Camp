@@ -84,7 +84,7 @@ class SVMClassifier:
         self.alphas = None
 
         # scalar bias term for linear kernal
-        self.b = 1
+        self.b = 0
         # width parameter for gaussian kernal
         self.sigma = 1
 
@@ -115,7 +115,7 @@ class SVMClassifier:
         self.y = y
 
         self._init_alpha()
-        self._init_error(X)
+        self._init_error(self.X)
 
         num_changed = 0
         examine_all = 1
@@ -128,7 +128,7 @@ class SVMClassifier:
                     examine_result = self._examine_example(i)
                     num_changed += examine_result
                     if examine_result:
-                        objective = self._objective_function(self, self.alphas)
+                        objective = self._objective_function(self.alphas)
                         self._obj.append(objective)
             else:
                 # loop over examples where alphas are not already at their
@@ -139,7 +139,7 @@ class SVMClassifier:
                     examine_result = self._examine_example(i)
                     num_changed += examine_result
                     if examine_result:
-                        objective = self._objective_function(self, self.alphas)
+                        objective = self._objective_function(self.alphas)
                         self._obj.append(objective)
             if examine_all == 1:
                 examine_all = 0
@@ -147,6 +147,22 @@ class SVMClassifier:
                 examine_all = 1
 
         return self
+
+    def predict(self, X):
+        """
+        Applies the SVM decision function to the input vectors X_test
+        """
+
+        if self.kernel == 'linear':
+            result = np.dot(
+                (self.alphas * self.y), self._linear_kernel(self.X, X)
+            ) - self.b
+        if self.kernel == 'gaussian':
+            result = np.dot(
+                (self.alphas * self.y), self._gaussian_kernel(self.X, X)
+            ) - self.b
+
+        return result
 
     def _init_alpha(self):
         """
@@ -172,7 +188,8 @@ class SVMClassifier:
         return result
 
     def _init_error(self, X):
-        self.errors = self.predict(X)
+        self.errors = self.predict(X) - self.y
+        return self
 
     def _gaussian_kernel(self, X, Y):
         """
@@ -211,25 +228,8 @@ class SVMClassifier:
         elif self.kernel == 'gaussian':
             bulk = self.y * self.y * self._gaussian_kernel(self.X, self.X) * \
                 alphas * alphas
-            objective = np.sum(alphas) - 1 / 2 * np.sum(bulk)
 
-        return objective
-
-    def predict(self, X):
-        """
-        Applies the SVM decision function to the input vectors X_test
-        """
-
-        if self.kernel == 'linear':
-            result = np.dot(
-                (self.alphas * self.y), self._linear_kernel(self.X, X)
-            ) - self.b
-        if self.kernel == 'gaussian':
-            result = np.dot(
-                (self.alphas * self.y), self._gaussian_kernel(self.X, X)
-            ) - self.b
-
-        return result
+        return np.sum(alphas) - 1 / 2 * np.sum(bulk)
 
     def plot_decision_boundary(self, ax, resolution=100):
             """
@@ -303,6 +303,10 @@ class SVMClassifier:
             k11 = self._linear_kernel(self.X[index_1], self.X[index_1])
             k12 = self._linear_kernel(self.X[index_1], self.X[index_2])
             k22 = self._linear_kernel(self.X[index_2], self.X[index_2])
+        elif self.kernel == 'gaussian':
+            k11 = self._gaussian_kernel(self.X[index_1], self.X[index_1])
+            k12 = self._gaussian_kernel(self.X[index_1], self.X[index_2])
+            k22 = self._gaussian_kernel(self.X[index_2], self.X[index_2])
         eta = 2 * k12 - k11 - k22
 
         # Compute new alpha 2 (a2) if eta is negative
@@ -317,10 +321,11 @@ class SVMClassifier:
             alphas_copy = self.alphas.copy()
             alphas_copy[index_2] = low
             # objective function output with a2 = L
-            low_objective = self.objective_function(alphas_copy)
+            low_objective = self._objective_function(alphas_copy)
+
             alphas_copy[index_2] = high
             # objective function output with a2 = H
-            high_objective = self.objective_function(alphas_copy)
+            high_objective = self._objective_function(alphas_copy)
 
             if low_objective > (high_objective + self.epsilon):
                 a2 = low
@@ -377,8 +382,13 @@ class SVMClassifier:
                 y2 * (a2 - alpha_2) * \
                 self._linear_kernel(self.X[index_2], self.X[non_optimized]) + \
                 self.b - b_new
-            self.errors[non_optimized] = self.errors[non_optimized] + \
-                correction
+        elif self.kernel == "gaussian":
+            correction = y1 * (a1 - alpha_1) * \
+                self._gaussian_kernel(self.X[index_1], self.X[non_optimized]) +\
+                y2 * (a2 - alpha_2) * \
+                self._gaussian_kernel(self.X[index_2], self.X[non_optimized]) +\
+                self.b - b_new
+        self.errors[non_optimized] = self.errors[non_optimized] + correction
 
         # Update model threshold
         self.b = b_new
