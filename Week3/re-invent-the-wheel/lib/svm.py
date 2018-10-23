@@ -81,18 +81,15 @@ class SVMClassifier:
         self.epsilon = epsilon
         self.tol = tol
 
+        # Kernel parameters. No need to be adjusted since it will be updated.
+        self.b = 0
+        self.sigma = 1
+
         # lagrange multiplier vector
         self.alphas = None
 
-        # scalar bias term for linear kernal
-        self.b = 0
-        # width parameter for gaussian kernal
-        self.sigma = 1
-
         # Error cache
         self.errors = None
-        # Record objective function value
-        self._obj = []
 
         # training data needs to be passed around for kernal trick
         self.X = None
@@ -112,14 +109,15 @@ class SVMClassifier:
         self : object
         """
 
+        y[y == 0] = -1
         self.X = X
         self.y = y
 
         self._init_alpha()
         self._init_error(self.X)
 
+        examine_all = True
         num_changed = 0
-        examine_all = 1
 
         while(num_changed > 0) or (examine_all):
             num_changed = 0
@@ -128,9 +126,6 @@ class SVMClassifier:
                 for i in range(self.alphas.shape[0]):
                     examine_result = self._examine_example(i)
                     num_changed += examine_result
-                    if examine_result:
-                        objective = self._objective_function(self.alphas)
-                        self._obj.append(objective)
             else:
                 # loop over examples where alphas are not already at their
                 # limits
@@ -139,15 +134,12 @@ class SVMClassifier:
                 )[0]:
                     examine_result = self._examine_example(i)
                     num_changed += examine_result
-                    if examine_result:
-                        objective = self._objective_function(self.alphas)
-                        self._obj.append(objective)
 
-            if examine_all == 1:
-                examine_all = 0
+            if examine_all:
+                examine_all = False
 
             elif num_changed == 0:
-                examine_all = 1
+                examine_all = True
 
         return self
 
@@ -194,6 +186,73 @@ class SVMClassifier:
             ) - self.b
 
         return result
+
+    def _examine_example(self, index2):
+        y2 = self.y[index2]
+        alpha2 = self.alphas[index2]
+        error2 = self.errors[index2]
+        r2 = error2 * y2
+
+        # Proceed if error is within specified tolerance (tol)
+        if ((r2 < -self.tol and
+             alpha2 < self.C) or (r2 > self.tol and alpha2 > 0)):
+
+            if (len(self.alphas[(self.alphas != 0) &
+                                (self.alphas != self.C)]) > 1):
+                # Use 2nd choice heuristic is choose max difference in error
+                if self.errors[index2] > 0:
+                    index1 = np.argmin(self.errors)
+                elif self.errors[index2] <= 0:
+                    index1 = np.argmax(self.errors)
+                step_result = self._take_step(index1, index2)
+                if step_result:
+                    return 1
+
+            # Loop through non-zero and non-C alphas, starting at a random
+            # point
+            for index1 in np.roll(
+                np.where((self.alphas != 0) & (self.alphas != self.C))[0],
+                np.random.choice(np.arange(self.X.shape[0]))
+            ):
+                step_result = self._take_step(index1, index2)
+                if step_result:
+                    return 1
+
+            # loop through all alphas, starting at a random point
+            for index1 in np.roll(
+                np.arange(self.X.shape[0]),
+                np.random.choice(np.arange(self.X.shape[0]))
+            ):
+                step_result = self._take_step(index1, index2)
+                if step_result:
+                    return 1
+
+        return 0
+
+    def _take_step(self, index1, index2):
+        alpha1 = self.alphas[index1]
+        alpha2 = self.alphas[index2]
+        low, high = self._compute_bounds(index1, index2)
+        a2 = self._compute_a2(index1, index2, low, high)
+
+        if (index1 == index2 or
+                low == high or
+                self._not_optimizable(a2, alpha2)):
+            return 0
+
+        a1 = self._compute_a1(index1, index2, a2)
+
+        b_new = self._compute_b(index1, index2, a1, a2)
+
+        # Update error cache
+        self._update_error_cache(b_new, index1, index2, a1, a2, alpha1, alpha2)
+
+        # Update model object with new alphas & threshold
+        self.alphas[index1] = a1
+        self.alphas[index2] = a2
+        self.b = b_new
+
+        return 1
 
     def _init_alpha(self):
         """
@@ -293,79 +352,6 @@ class SVMClassifier:
                 alphas * alphas
 
         return np.sum(alphas) - 1 / 2 * np.sum(bulk)
-
-    def _take_step(self, index1, index2):
-        # Skip if chosen alphas are the same
-        if index1 == index2:
-            return 0
-
-        alpha1 = self.alphas[index1]
-        alpha2 = self.alphas[index2]
-
-        low, high = self._compute_bounds(index1, index2)
-        if (low == high):
-            return 0
-
-        a2 = self._compute_a2(index1, index2, low, high)
-        if self._not_optimizable(a2, alpha2):
-            return 0
-        a1 = self._compute_a1(index1, index2, a2)
-
-        b_new = self._compute_b(index1, index2, a1, a2)
-
-        # Update model object with new alphas & threshold
-        self.alphas[index1] = a1
-        self.alphas[index2] = a2
-
-        # Update error cache
-        self._update_error_cache(b_new, index1, index2, a1, a2, alpha1, alpha2)
-
-        # Update model threshold
-        self.b = b_new
-
-        return 1
-
-    def _examine_example(self, index2):
-        y2 = self.y[index2]
-        alpha2 = self.alphas[index2]
-        error2 = self.errors[index2]
-        r2 = error2 * y2
-
-        # Proceed if error is within specified tolerance (tol)
-        if ((r2 < -self.tol and
-             alpha2 < self.C) or (r2 > self.tol and alpha2 > 0)):
-
-            if (len(self.alphas[(self.alphas != 0) &
-                                (self.alphas != self.C)]) > 1):
-                # Use 2nd choice heuristic is choose max difference in error
-                if self.errors[index2] > 0:
-                    index1 = np.argmin(self.errors)
-                elif self.errors[index2] <= 0:
-                    index1 = np.argmax(self.errors)
-                step_result = self._take_step(index1, index2)
-                if step_result:
-                    return 1
-
-            # Loop through non-zero and non-C alphas, starting at a random
-            # point
-            for index1 in np.roll(
-                np.where((self.alphas != 0) & (self.alphas != self.C))[0],
-                np.random.choice(np.arange(self.X.shape[0]))
-            ):
-                step_result = self._take_step(index1, index2)
-                if step_result:
-                    return 1
-
-            # loop through all alphas, starting at a random point
-            for index1 in np.roll(
-                np.arange(self.X.shape[0]),
-                np.random.choice(np.arange(self.X.shape[0]))
-            ):
-                step_result = self._take_step(index1, index2)
-                if step_result:
-                    return 1
-
-        return 0
 
     def _compute_bounds(self, index1, index2):
         """
